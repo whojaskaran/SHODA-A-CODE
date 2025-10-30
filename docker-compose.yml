@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  backend:
+    build:
+      context: ./backend/demo
+      dockerfile: Dockerfile
+    image: shodh-backend:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - JAVA_TOOL_OPTIONS=-XX:+UseZGC
+    depends_on:
+      - docker
+  frontend:
+    working_dir: /app
+    build:
+      context: ./frontend
+      dockerfile: |
+        FROM node:20-alpine
+        WORKDIR /app
+        COPY package*.json ./
+        RUN npm ci
+        COPY . .
+        CMD ["npm", "run", "dev", "--", "--host"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - VITE_API_BASE=http://backend:8080
+    depends_on:
+      - backend
+  docker:
+    image: docker:dind
+    privileged: true
+    ports: ["2375:2375"]
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    command: ["--host=tcp://0.0.0.0:2375"]
